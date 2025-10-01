@@ -11,9 +11,9 @@ app = Flask(__name__)
 CORS(app)
 
 # Configuração do MongoDB Atlas com suas credenciais
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb+srv://admin:123@cluster0.t2ywknm.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
-DB_NAME = os.getenv('DB_NAME', 'atlas-db')
-COLLECTION_NAME = os.getenv('COLLECTION_NAME', 'feeds')
+MONGO_URI = os.getenv('MONGO_URI')
+DB_NAME = os.getenv('DB_NAME')
+COLLECTION_NAME = os.getenv('COLLECTION_NAME')
 
 print("Tentando conectar ao MongoDB...")
 print(f"Database: {DB_NAME}")
