@@ -47,16 +47,21 @@ Este projeto é um sistema completo de monitoramento em tempo real de dados de u
 ## 📁 Estrutura do Projeto
 
 ```
-projeto-monitoramento/
+iot-projeto/
 │
-├── 📄 index.html          # Interface principal do dashboard
+├── 📄 index.html          # Tela de login
+├── 📄 dashboard.html      # Interface principal do dashboard
 ├── 📄 app.js              # Lógica do frontend
+├── 📄 style.css           # Estilos
 ├── 📄 README.md           # Este arquivo
 │
 └── 📁 api/                # Backend e configurações
     ├── 📄 app.py          # Servidor Flask API
     ├── 📄 requirements.txt # Dependências Python
     └── 📄 .env.example    # Exemplo de variáveis de ambiente
+└── 📁 assets/             # Imagens
+    ├── 📄 logo-silo.jpeg  # Logo AgriGrowth
+    └── 📄 silos.jpeg      # Fundo da Tela de Login
 ```
 
 ## ⚙️ Configuração e Instalação
