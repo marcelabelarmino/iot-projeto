@@ -57,7 +57,7 @@ const VALID_PASSWORD = 'password';
 // === CONFIGURAÇÃO DE ALERTAS ===
 const ALERT_CONFIG = {
     humidity: { min: 60, max: 70 },
-    temperature: { min: 18, max: 25 },
+    temperature: { min: 18, max: 30 },
 };
 
 let lastAlertTime = 0;
