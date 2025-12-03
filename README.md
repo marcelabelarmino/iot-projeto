@@ -51,6 +51,7 @@ iot-projeto/
 │
 ├── 📄 index.html          # Tela de login
 ├── 📄 dashboard.html      # Interface principal do dashboard
+├── 📄 telaUsuario.html    # Interface de Gerenciamento de usuários
 ├── 📄 app.js              # Lógica do frontend
 ├── 📄 style.css           # Estilos
 ├── 📄 README.md           # Este arquivo
