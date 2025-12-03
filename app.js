@@ -441,5 +441,12 @@ function init() {
         initDashboard();
     }
 }
+// Navegar do Dashboard → Usuários
+const menuUsersBtn = document.getElementById('menu-users');
+if (menuUsersBtn) {
+    menuUsersBtn.addEventListener('click', () => {
+        window.location.href = 'telaUsuario.html';
+    });
+}
 
 document.addEventListener('DOMContentLoaded', init);

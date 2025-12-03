@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gerenciamento de Usuários</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'primary-dark': '#254021',
+            'primary-medium': '#335918',
+            'primary': '#5F8C1B',
+            'accent': '#F2CF63',
+          }
+        }
+      }
+    }
+  </script>
+
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="page-bg p-6 flex items-center justify-center min-h-screen bg-gray-50 font-[Inter]">
+
+  <div class="dashboard-container container max-w-6xl w-full space-y-6">
+
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div class="flex items-center space-x-4">
+        <div class="w-16 h-16 rounded-full overflow-hidden bg-white border shadow">
+          <img src="assets/logo-silo.jpeg" alt="Logo da Agrigrowth" class="w-full h-full object-cover" />
+        </div>
+
+        <div>
+          <h1 class="text-2xl md:text-4xl font-bold text-primary-dark">Gerenciamento de Usuários</h1>
+          <p class="text-lg md:text-xl text-gray-600">Controle e Cadastro de Acessos</p>
+        </div>
+      </div>
+
+      <div class="flex gap-3 w-full md:w-auto">
+        <!-- Botão voltar ao dashboard -->
+        <button id="back-dashboard"
+          class="bg-accent text-primary-dark py-2 px-4 rounded-lg hover:bg-accent/80 transition shadow flex-1 md:flex-none">
+          Dashboard
+        </button>
+
+        <!-- Botão sair -->
+        <button id="index"
+          class="bg-primary-medium text-white py-2 px-4 rounded-lg hover:bg-primary-dark transition shadow flex-1 md:flex-none">
+          Sair
+        </button>
+      </div>
+    </div>
+
+    <!-- Card Principal -->
+    <div class="bg-white p-4 md:p-6 rounded-xl shadow-lg border">
+
+      <div class="flex flex-col md:flex-row justify-between mb-6 gap-4">
+        <h2 class="text-xl md:text-2xl font-semibold text-primary-dark">Lista de Usuários</h2>
+
+        <button id="openModal"
+          class="bg-accent text-primary-dark py-2 px-4 rounded-lg hover:bg-accent/80 transition shadow w-full md:w-auto">
+          + Adicionar Usuário
+        </button>
+      </div>
+
+      <!-- Tabela -->
+      <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-4 md:px-6 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">Nome</th>
+              <th class="px-4 md:px-6 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">E-mail</th>
+              <th class="px-4 md:px-6 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">Função</th>
+              <th class="px-4 md:px-6 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th class="px-4 md:px-6 py-3 text-left text-xs md:text-sm font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+            </tr>
+          </thead>
+
+          <tbody id="userTable" class="bg-white divide-y divide-gray-200">
+            <!-- Usuários serão carregados dinamicamente aqui -->
+          </tbody>
+        </table>
+        
+        <!-- Mensagem quando não há usuários -->
+        <div id="emptyMessage" class="text-center py-8 text-gray-500 hidden">
+          Nenhum usuário cadastrado. Clique em "Adicionar Usuário" para começar.
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal de Cadastro/Edição -->
+  <div id="userModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border">
+      <div class="flex justify-between mb-4">
+        <h3 id="modalTitle" class="text-2xl font-bold text-primary-dark">Novo Usuário</h3>
+
+        <button id="closeModal" class="text-gray-400 hover:text-gray-600">
+          ❌
+        </button>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <input id="nome" type="text" placeholder="Nome completo" class="w-full px-3 py-2 border rounded-md">
+          <p id="nomeError" class="text-red-500 text-sm mt-1 hidden">Por favor, informe o nome completo</p>
+        </div>
+        
+        <div>
+          <input id="email" type="email" placeholder="E-mail" class="w-full px-3 py-2 border rounded-md">
+          <p id="emailError" class="text-red-500 text-sm mt-1 hidden">Por favor, informe um e-mail válido</p>
+        </div>
+
+        <div>
+          <label for="funcao" class="block text-sm font-medium text-primary-dark mb-2">
+            Função do Usuário
+          </label>
+          <select id="funcao" aria-label="Função do usuário" title="Função do usuário"
+            class="w-full px-3 py-2 border rounded-md">
+            <option value="Administrador">Administrador</option>
+            <option value="Operador">Operador</option>
+            <option value="Visitante">Visitante</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="status" class="block text-sm font-medium text-primary-dark mb-2">
+            Status do Usuário
+          </label>
+          <select id="status" aria-label="Status do usuário" title="Status do usuário"
+            class="w-full px-3 py-2 border rounded-md">
+            <option value="Ativo">Ativo</option>
+            <option value="Inativo">Inativo</option>
+          </select>
+        </div>
+
+      </div>
+
+      <div class="mt-6 flex justify-end gap-3">
+        <button id="cancelBtn" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">Cancelar</button>
+        <button id="saveUser" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary-medium transition">Salvar</button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal de Confirmação de Exclusão -->
+  <div id="deleteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border">
+      <div class="flex justify-between mb-4">
+        <h3 class="text-xl font-bold text-primary-dark">Confirmar Exclusão</h3>
+        <button id="closeDeleteModal" class="text-gray-400 hover:text-gray-600">
+          ❌
+        </button>
+      </div>
+      
+      <p id="deleteMessage" class="mb-6">Tem certeza que deseja excluir este usuário?</p>
+      
+      <div class="flex justify-end gap-3">
+        <button id="cancelDelete" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition">Cancelar</button>
+        <button id="confirmDelete" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition">Excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Notificação -->
+  <div id="notification" class="fixed top-4 right-4 p-4 rounded-lg shadow-lg hidden z-50 transition-all duration-300">
+    <div class="flex items-center">
+      <span id="notificationIcon" class="mr-2">✅</span>
+      <span id="notificationText">Operação realizada com sucesso!</span>
+    </div>
+  </div>
+
+  <script src="usuario.js"></script>
+</body>
+
+</html>
