@@ -55,11 +55,11 @@ iot-projeto/
 ├── 📄 app.js              # Lógica do frontend
 ├── 📄 usuario.js          # Lógica dos usuários
 ├── 📄 style.css           # Estilos
+├── 📄 requirements.txt    # Dependências Python
 ├── 📄 README.md           # Este arquivo
 │
 └── 📁 api/                # Backend e configurações
     ├── 📄 app.py          # Servidor Flask API
-    ├── 📄 requirements.txt # Dependências Python
     └── 📄 .env.example    # Exemplo de variáveis de ambiente
 └── 📁 assets/             # Imagens
     ├── 📄 logo-silo.jpeg  # Logo AgriGrowth
