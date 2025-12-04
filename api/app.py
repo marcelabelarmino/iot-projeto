@@ -4,6 +4,7 @@ from pymongo import MongoClient
 from datetime import datetime
 import os
 from dotenv import load_dotenv
+import bcrypt  # Para hash de senhas
 
 load_dotenv()
 
@@ -17,50 +18,53 @@ COLLECTION_NAME = os.getenv('COLLECTION_NAME')
 
 print("Tentando conectar ao MongoDB...")
 print(f"Database: {DB_NAME}")
-print(f"Collection: {COLLECTION_NAME}")
+print(f"Collection principal: {COLLECTION_NAME}")
 
 # Inicializar variáveis
 client = None
 db = None
 collection = None
+users_collection = None  # Nova coleção para usuários
 
 try:
-    client = MongoClient(MONGO_URI)
-    
-    # Testar a conexão
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
     client.admin.command('ping')
     print("Conectado ao MongoDB Atlas com sucesso!")
-    
+
     db = client[DB_NAME]
     collection = db[COLLECTION_NAME]
     
-    # Verificar se a collection existe e tem dados
+    # Verificar dados na coleção principal
     count = collection.count_documents({})
-    print(f"Total de documentos na collection: {count}")
-    
+    print(f"Total de documentos na coleção '{COLLECTION_NAME}': {count}")
+
+    # === Carregar coleção de usuários ===
+    users_collection = db['users']
+    user_count = users_collection.count_documents({})
+    print(f"Coleção 'users' carregada com sucesso! ({user_count} usuário(s) existente(s))")
+
 except Exception as e:
-    print(f"Erro ao conectar com MongoDB: {e}")
-    print(f"Verifique se:")
-    print(f"   - Suas credenciais estao corretas")
-    print(f"   - O IP esta na whitelist do MongoDB Atlas")
-    print(f"   - A database e collection existem")
+    print(f"ERRO ao conectar com MongoDB: {e}")
+    print("Verifique:")
+    print("   - MONGO_URI está correto no .env")
+    print("   - IP permitido no Network Access do Atlas")
+    print("   - Database e collections existem")
+
+# ========================
+# ROTAS DOS SENSORES
+# ========================
 
 @app.route('/api/data', methods=['GET'])
 def get_sensor_data():
     if collection is None:
-        return jsonify({'error': 'Conexao com MongoDB nao estabelecida'}), 500
-    
+        return jsonify({'error': 'Conexão com MongoDB não estabelecida'}), 500
+
     try:
         limit = int(request.args.get('limit', 100))
         start_date = request.args.get('start_date')
         end_date = request.args.get('end_date')
-        
-        print(f"Buscando {limit} registros do MongoDB...")
-        
-        # Construir query base
+
         query = {}
-        
-        # Adicionar filtro de data se fornecido
         if start_date or end_date:
             date_filter = {}
             if start_date:
@@ -68,171 +72,215 @@ def get_sensor_data():
             if end_date:
                 date_filter['$lte'] = datetime.fromisoformat(end_date.replace('Z', '+00:00'))
             query['created_at'] = date_filter
-        
-        # Buscar dados do MongoDB - ordenados pelos mais recentes
+
         feeds = list(collection.find(
-            query, 
+            query,
             {'_id': 0, 'field1': 1, 'field2': 1, 'created_at': 1}
         ).sort('created_at', -1).limit(limit))
-        
-        print(f"Encontrados {len(feeds)} registros")
-        
-        # Formatar dados - reverter para ordem cronológica
+
         formatted_feeds = []
         for feed in reversed(feeds):
-            formatted_feed = {
+            formatted_feeds.append({
                 'field1': feed.get('field1'),
                 'field2': feed.get('field2'),
                 'created_at': feed.get('created_at')
-            }
-            formatted_feeds.append(formatted_feed)
-        
-        # Estatísticas dos dados
+            })
+
         valid_feeds = [f for f in formatted_feeds if f['field1'] is not None and f['field2'] is not None]
-        print(f"Dados validos: {len(valid_feeds)}/{len(formatted_feeds)}")
-        
+
         return jsonify({
             'feeds': formatted_feeds,
-            'channel': {
-                'id': 'mongodb_channel',
-                'name': 'MongoDB Sensor Data'
-            },
+            'channel': {'id': 'mongodb_channel', 'name': 'MongoDB Sensor Data'},
             'stats': {
                 'total': len(formatted_feeds),
                 'valid': len(valid_feeds),
-                'filters_applied': {
-                    'limit': limit,
-                    'start_date': start_date,
-                    'end_date': end_date
-                }
+                'filters_applied': {'limit': limit, 'start_date': start_date, 'end_date': end_date}
             }
         })
-        
+
     except Exception as e:
-        print(f"Erro ao buscar dados: {e}")
+        print(f"Erro em /api/data: {e}")
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
     try:
-        if client is not None and collection is not None:
+        if client and collection:
             client.admin.command('ping')
-            count = collection.count_documents({})
-            return jsonify({
-                'status': 'healthy', 
-                'database': 'connected',
-                'total_records': count
-            })
+            return jsonify({'status': 'healthy', 'database': 'connected', 'records': collection.count_documents({})}), 200
         else:
             return jsonify({'status': 'error', 'database': 'disconnected'}), 500
     except Exception as e:
-        return jsonify({'status': 'error', 'database': 'disconnected', 'error': str(e)}), 500
+        return jsonify({'status': 'error', 'error': str(e)}), 500
 
-@app.route('/api/test', methods=['GET'])
-def test_connection():
-    """Rota para testar a conexao e estrutura dos dados"""
+
+# ========================
+# ROTAS DE USUÁRIOS
+# ========================
+
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    if users_collection is None:
+        return jsonify({'error': 'Banco de dados indisponível'}), 500
     try:
-        if collection is None:
-            return jsonify({'error': 'Collection nao disponivel'}), 500
-            
-        # Buscar um documento de exemplo para ver a estrutura
-        sample = collection.find_one({}, {'_id': 0})
-        
-        # Contar documentos por campo
-        total = collection.count_documents({})
-        with_field1 = collection.count_documents({'field1': {'$exists': True, '$ne': None}})
-        with_field2 = collection.count_documents({'field2': {'$exists': True, '$ne': None}})
-        
-        # Buscar datas mínima e máxima
-        oldest = collection.find_one({}, {'created_at': 1}, sort=[('created_at', 1)])
-        newest = collection.find_one({}, {'created_at': 1}, sort=[('created_at', -1)])
-        
-        return jsonify({
-            'sample_document': sample,
-            'counts': {
-                'total': total,
-                'with_field1': with_field1,
-                'with_field2': with_field2
-            },
-            'date_range': {
-                'oldest': oldest.get('created_at') if oldest else None,
-                'newest': newest.get('created_at') if newest else None
-            },
-            'connection_info': {
-                'database': DB_NAME,
-                'collection': COLLECTION_NAME
-            }
-        })
-        
+        # Não retornar senha por segurança
+        users = list(users_collection.find({}, {'_id': 0, 'senha': 0}).sort('id', 1))
+        return jsonify(users)
     except Exception as e:
+        print(f"Erro GET /api/users: {e}")
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/stats', methods=['GET'])
-def get_detailed_stats():
-    """Rota para estatísticas detalhadas"""
+
+@app.route('/api/users', methods=['POST'])
+def create_user():
+    if users_collection is None:
+        return jsonify({'error': 'Banco de dados indisponível'}), 500
+
     try:
-        if collection is None:
-            return jsonify({'error': 'Collection nao disponivel'}), 500
-            
-        # Estatísticas básicas
-        total = collection.count_documents({})
-        
-        # Estatísticas de campos
-        stats = {
-            'total_records': total,
-            'records_with_field1': collection.count_documents({'field1': {'$exists': True, '$ne': None}}),
-            'records_with_field2': collection.count_documents({'field2': {'$exists': True, '$ne': None}}),
-            'records_with_both_fields': collection.count_documents({
-                'field1': {'$exists': True, '$ne': None},
-                'field2': {'$exists': True, '$ne': None}
-            })
+        data = request.get_json()
+        if not data or not data.get('nome') or not data.get('email') or not data.get('senha'):
+            return jsonify({'error': 'Nome, email e senha são obrigatórios'}), 400
+
+        email = data['email'].strip().lower()
+        if users_collection.find_one({'email': email}):
+            return jsonify({'error': 'Este email já está cadastrado'}), 400
+
+        # Gerar próximo ID
+        last = users_collection.find().sort('id', -1).limit(1)
+        last_doc = next(last, None)
+        new_id = (last_doc['id'] + 1) if last_doc else 1
+
+        # Hash da senha
+        hashed_senha = bcrypt.hashpw(data['senha'].encode('utf-8'), bcrypt.gensalt())
+
+        new_user = {
+            'id': new_id,
+            'nome': data['nome'].strip(),
+            'email': email,
+            'funcao': data.get('funcao', 'Operador'),
+            'status': data.get('status', 'Ativo'),
+            'senha': hashed_senha  # Armazena hash
         }
-        
-        # Estatísticas numéricas se houver dados
-        if stats['records_with_field1'] > 0:
-            pipeline = [
-                {'$match': {'field1': {'$exists': True, '$ne': None}}},
-                {'$group': {
-                    '_id': None,
-                    'avg': {'$avg': '$field1'},
-                    'min': {'$min': '$field1'},
-                    'max': {'$max': '$field1'},
-                    'count': {'$sum': 1}
-                }}
-            ]
-            field1_stats = list(collection.aggregate(pipeline))
-            if field1_stats:
-                stats['field1'] = field1_stats[0]
-        
-        if stats['records_with_field2'] > 0:
-            pipeline = [
-                {'$match': {'field2': {'$exists': True, '$ne': None}}},
-                {'$group': {
-                    '_id': None,
-                    'avg': {'$avg': '$field2'},
-                    'min': {'$min': '$field2'},
-                    'max': {'$max': '$field2'},
-                    'count': {'$sum': 1}
-                }}
-            ]
-            field2_stats = list(collection.aggregate(pipeline))
-            if field2_stats:
-                stats['field2'] = field2_stats[0]
-        
-        return jsonify(stats)
-        
+
+        users_collection.insert_one(new_user)
+        # Retorna sem senha
+        del new_user['senha']
+        return jsonify(new_user), 201
+
     except Exception as e:
+        print(f"Erro ao criar usuário: {e}")
+        return jsonify({'error': 'Erro interno ao salvar usuário'}), 500
+
+
+@app.route('/api/users/<int:user_id>', methods=['PUT'])
+def update_user(user_id):
+    if users_collection is None:
+        return jsonify({'error': 'Banco de dados indisponível'}), 500
+
+    try:
+        data = request.get_json()
+        if not data or not data.get('nome') or not data.get('email'):
+            return jsonify({'error': 'Nome e email são obrigatórios'}), 400
+
+        email = data['email'].strip().lower()
+
+        # Verificar conflito de email
+        if users_collection.find_one({'email': email, 'id': {'$ne': user_id}}):
+            return jsonify({'error': 'Este email já está em uso por outro usuário'}), 400
+
+        updated = {
+            'nome': data['nome'].strip(),
+            'email': email,
+            'funcao': data.get('funcao', 'Operador'),
+            'status': data.get('status', 'Ativo')
+        }
+
+        # Se senha for enviada, hash e atualiza
+        if data.get('senha'):
+            if data['senha'] != data.get('confirmarSenha', ''):
+                return jsonify({'error': 'Senhas não coincidem'}), 400
+            hashed_senha = bcrypt.hashpw(data['senha'].encode('utf-8'), bcrypt.gensalt())
+            updated['senha'] = hashed_senha
+
+        result = users_collection.update_one({'id': user_id}, {'$set': updated})
+        if result.modified_count:
+            updated['id'] = user_id
+            return jsonify(updated)
+        else:
+            return jsonify({'error': 'Usuário não encontrado'}), 404
+
+    except Exception as e:
+        print(f"Erro ao atualizar usuário: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+def delete_user(user_id):
+    if users_collection is None:
+        return jsonify({'error': 'Banco de dados indisponível'}), 500
+
+    try:
+        result = users_collection.delete_one({'id': user_id})
+        if result.deleted_count:
+            return jsonify({'message': 'Usuário excluído com sucesso'})
+        else:
+            return jsonify({'error': 'Usuário não encontrado'}), 404
+    except Exception as e:
+        print(f"Erro ao excluir usuário: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# ========================
+# ROTA DE LOGIN
+# ========================
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    if users_collection is None:
+        return jsonify({'error': 'Banco de dados indisponível'}), 500
+
+    try:
+        data = request.get_json()
+        if not data or not data.get('email') or not data.get('senha'):
+            return jsonify({'error': 'Email e senha são obrigatórios'}), 400
+
+        email = data['email'].strip().lower()
+        user = users_collection.find_one({'email': email}, {'_id': 0})
+
+        if not user:
+            return jsonify({'error': 'Usuário não encontrado'}), 401
+
+        if not bcrypt.checkpw(data['senha'].encode('utf-8'), user['senha']):
+            return jsonify({'error': 'Senha incorreta'}), 401
+
+        # Retorna dados do usuário sem senha
+        del user['senha']
+        return jsonify({'message': 'Login bem-sucedido', 'user': user}), 200
+
+    except Exception as e:
+        print(f"Erro no login: {e}")
+        return jsonify({'error': 'Erro interno no login'}), 500
+
+
+# ========================
+# INICIAR SERVIDOR
+# ========================
 
 if __name__ == '__main__':
-    print("\n" + "="*50)
-    print("Iniciando Servidor Flask")
-    print("="*50)
-    print("API MongoDB Dashboard")
-    print(f"URL: http://localhost:5000")
-    print(f"Dados: http://localhost:5000/api/data")
-    print(f"Health: http://localhost:5000/api/health")
-    print(f"Teste: http://localhost:5000/api/test")
-    print(f"Estatísticas: http://localhost:5000/api/stats")
-    print("="*50)
+    print("\n" + "="*60)
+    print(" SERVIDOR FLASK INICIADO COM SUCESSO ")
+    print("="*60)
+    print("API Dashboard + Gerenciamento de Usuários + Login")
+    print("http://localhost:5000")
+    print("")
+    print("Rotas disponíveis:")
+    print("   GET    /api/data")
+    print("   GET    /api/users")
+    print("   POST   /api/users")
+    print("   PUT    /api/users/<id>")
+    print("   DELETE /api/users/<id>")
+    print("   POST   /api/login")  # Nova rota
+    print("   GET    /api/health")
+    print("="*60)
     app.run(debug=True, port=5000)

@@ -50,9 +50,39 @@ let currentData = [];
 let currentPage = 1;
 const itemsPerPage = 20;
 
-// Credenciais hardcoded (exemplo)
-const VALID_USERNAME = 'admin';
-const VALID_PASSWORD = 'password';
+loginForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    
+    const email = document.getElementById('username').value.trim();
+    const senha = document.getElementById('password').value.trim();
+
+    try {
+        const response = await fetch('http://localhost:5000/api/login', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email, senha })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            loginError.textContent = data.error || 'Erro ao fazer login';
+            loginError.classList.remove('hidden');
+            return;
+        }
+
+        // Salva login no navegador
+        localStorage.setItem('loggedIn', 'true');
+        localStorage.setItem('userData', JSON.stringify(data.user));
+
+        window.location.href = 'dashboard.html';
+
+    } catch (err) {
+        loginError.textContent = 'Falha na conexão com o servidor';
+        loginError.classList.remove('hidden');
+    }
+});
+
 
 // === CONFIGURAÇÃO DE ALERTAS ===
 const ALERT_CONFIG = {
@@ -437,10 +467,24 @@ async function initDashboard() {
 
 function init() {
     showScreen();
+
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+    const role = userData.funcao;
+
+    const menuUsersBtn = document.getElementById('menu-users');
+
+    // 🔥 Se NÃO for admin → esconde botão
+    if (menuUsersBtn) {
+        if (role !== 'Administrador') {
+            menuUsersBtn.style.display = 'none';
+        }
+    }
+
     if (isDashboardPage && checkLogin()) {
         initDashboard();
     }
 }
+
 // Navegar do Dashboard → Usuários
 const menuUsersBtn = document.getElementById('menu-users');
 if (menuUsersBtn) {
