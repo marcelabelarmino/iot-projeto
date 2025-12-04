@@ -17,7 +17,6 @@ Este projeto é um sistema completo de monitoramento em tempo real de dados de u
 - **Exportação de Dados**:
   - Gráfico como PNG
   - Dados como CSV
-- **Design Responsivo**: Interface adaptável para desktop e mobile
 
 ### Backend (API)
 - **Conexão com MongoDB Atlas**: Armazenamento e recuperação de dados
@@ -40,6 +39,7 @@ Este projeto é um sistema completo de monitoramento em tempo real de dados de u
 - **PyMongo** - Driver MongoDB
 - **Flask-CORS** - Habilitar CORS
 - **python-dotenv** - Gerenciamento de variáveis de ambiente
+- **b-crypt** - Gerar hash seguro
 
 ### Banco de Dados
 - **MongoDB Atlas** - Banco de dados na nuvem
@@ -51,7 +51,9 @@ iot-projeto/
 │
 ├── 📄 index.html          # Tela de login
 ├── 📄 dashboard.html      # Interface principal do dashboard
+├── 📄 telaUsuario.html    # Interface de Gerenciamento de Usuários
 ├── 📄 app.js              # Lógica do frontend
+├── 📄 usuario.js          # Lógica dos usuários
 ├── 📄 style.css           # Estilos
 ├── 📄 README.md           # Este arquivo
 │
@@ -90,6 +92,7 @@ Edite o arquivo `.env` com suas credenciais:
 MONGO_URI=mongodb+srv://seu_usuario:senha@cluster.mongodb.net/?retryWrites=true&w=majority
 DB_NAME=seu_banco_de_dados
 COLLECTION_NAME=sua_colecao
+USERS_COLLECTION_NAME=NOME_COLECAO_USUARIOS
 ```
 
 ### 2. Execução do Projeto
