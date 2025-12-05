@@ -268,20 +268,19 @@ def login():
 # ========================
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-
     print("\n" + "="*60)
-    print(" SERVIDOR FLASK INICIADO ")
+    print(" SERVIDOR FLASK INICIADO COM SUCESSO ")
     print("="*60)
-    print(f"Rodando na porta: {port}")
+    print("API Dashboard + Gerenciamento de Usuários + Login")
+    print("http://localhost:5000")
+    print("")
     print("Rotas disponíveis:")
     print("   GET    /api/data")
     print("   GET    /api/users")
     print("   POST   /api/users")
     print("   PUT    /api/users/<id>")
     print("   DELETE /api/users/<id>")
-    print("   POST   /api/login")
+    print("   POST   /api/login")  # Nova rota
     print("   GET    /api/health")
     print("="*60)
-
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True, port=5000)
